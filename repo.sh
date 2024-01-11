@@ -43,18 +43,21 @@ fpm \
     --prefix /etc/apt/trusted.gpg.d \
     ${keyring_files}
 
-mkdir -p "${PWD}/.repo/${repo_name}/conf"
-(
-    echo "Origin: ${origin}"
-    echo "Suite: ${suite}"
-    echo "Label: ${label}"
-    echo "Codename: ${codename}"
-    echo "Components: ${component}"
-    echo "Architectures: ${architectures}"
-    echo "SignWith: ${fingerprints[*]}"
-    echo "Limit: ${limit}"
-    echo ""
-) >>"${PWD}/.repo/${repo_name}/conf/distributions"
+# add repo config template if none exists
+if [ ! -f "${PWD}/.repo/${repo_name}/conf/distributions" ]; then
+    mkdir -p "${PWD}/.repo/${repo_name}/conf"
+    (
+        echo "Origin: ${origin}"
+        echo "Suite: ${suite}"
+        echo "Label: ${label}"
+        echo "Codename: ${codename}"
+        echo "Components: ${component}"
+        echo "Architectures: ${architectures}"
+        echo "SignWith: ${fingerprints[*]}"
+        echo "Limit: ${limit}"
+        echo ""
+    ) >"${PWD}/.repo/${repo_name}/conf/distributions"
+fi
 
 if ! grep -q "^Components:.*${component}" "${PWD}/.repo/${repo_name}/conf/distributions"; then
     sed -i "s,^Components: \(.*\),Components: \1 ${component}, " "${PWD}/.repo/${repo_name}/conf/distributions"

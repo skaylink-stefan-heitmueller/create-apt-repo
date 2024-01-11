@@ -42,6 +42,11 @@ inputs:
       Private gpg key for signing.
       Please use Secrets!
     required: true
+outputs:
+  tmpdir:
+    description: >-
+      Directory which contains the APT repo.
+    value: ${{ steps.create-apt-repo.outputs.tmpdir }}
 runs:
   using: composite
   steps:
@@ -57,6 +62,7 @@ runs:
       with:
         packages: reprepro ruby-dev binutils
     - name: Create APT repo
+      id: create-apt-repo
       run: ${{ github.action_path }}/repo.sh
       shell: bash
       env:

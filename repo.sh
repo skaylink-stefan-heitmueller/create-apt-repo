@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 tmpdir="$(mktemp -d)"
 
@@ -123,3 +123,5 @@ if ! $reprepro_basedir -v checkpool fast |& tee /tmp/missing; then
             "${name}=${version}"
     done
 fi
+
+echo "tmpdir=${tmpdir}" >> "${GITHUB_OUTPUT}"

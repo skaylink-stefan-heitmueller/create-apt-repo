@@ -125,6 +125,9 @@ if ! $reprepro_basedir -v checkpool fast |& tee /tmp/missing; then
     done
 fi
 
-cp -rv "${tmpdir}/.repo/${repo_name}"/{dists,pool} "${tmpdir}"/.repo/gpg.key "${repodir}"
+cp -rv "${tmpdir}/.repo/${repo_name}"/{dists,pool} "${tmpdir}"/.repo/gpg.key "${repodir}"/
+
+# See https://github.com/actions/upload-pages-artifact#example-permissions-fix-for-linux
+chmod -c -R +rX "${repodir}"
 
 echo "repodir=${repodir}" >> "${GITHUB_OUTPUT}"

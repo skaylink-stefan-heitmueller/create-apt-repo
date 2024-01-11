@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 tmpdir="$(mktemp -d)"
 
@@ -39,7 +39,7 @@ fpm \
     --output-type deb \
     --architecture all \
     --name "${keyring_name}" \
-    --version "${keyring_version//_/-}" \
+    --version "${keyring_version}" \
     --prefix /etc/apt/trusted.gpg.d \
     ${keyring_files}
 

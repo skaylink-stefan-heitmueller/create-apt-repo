@@ -17,30 +17,24 @@ limit="${LIMIT:-0}"
 reprepro_basedir="reprepro -b ${tmpdir}/.repo/${repo_name}"
 reprepro="${reprepro_basedir} -C ${component}"
 
-# import keys, create keyring package
-mapfile -t signing_keys < <(printenv | grep -o --color=never "^SIGNING_KEY" | sort)
-
 if ! command -v fpm >/dev/null 2>&1; then
     apt-get -qq update
     apt-get -qqy install ruby-dev binutils
     gem install fpm --no-doc
 fi
 
+gpg --import <<<"${SIGNING_KEY}" 2>&1 | tee /tmp/gpg.log
+mapfile -t fingerprints < <(grep -o "key [0-9A-Z]*:" /tmp/gpg.log | sort -u | grep -o "[0-9A-Z]*" | tail -n1)
+keyring_version=0
 keyring_files=""
-fingerprints=()
-
-for signing_key in "${signing_keys[@]}"; do
-    # shellcheck disable=SC2206
-    split=(${signing_key//_/ })
-    id="${split[*]:2}"
-    id="${id// /-}"
-    keyring_version="${signing_key//SIGNING_KEY_/}"
-    gpg --import <<<"${!signing_key}" 2>&1 | tee /tmp/gpg.log
-    fingerprint="$(grep -o "key [0-9A-Z]*:" /tmp/gpg.log | grep -o "[0-9A-Z]*" | tail -n1)"
-    fingerprints+=("${fingerprint}")
-    gpg --export "${fingerprint}" >"${keyring_name}-${id}.gpg"
-    keyring_files+="${keyring_name}-${id}.gpg "
+for fingerprint in "${fingerprints[@]}"; do
+    IFS=':' read -r -a pub < <(gpg --list-keys --with-colons "${fingerprint}" | grep pub --color=never)
+    creation_date="${pub[5]}"
+    keyring_version=$(( "${keyring_version}" + "${creation_date}" ))
+    gpg --export "${fingerprint}" >"${keyring_name}-${creation_date}.gpg"
+    keyring_files+="${keyring_name}-${creation_date}.gpg "
 done
+
 # shellcheck disable=SC2086
 fpm \
     --log error \

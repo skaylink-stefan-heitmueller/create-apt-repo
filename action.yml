@@ -36,6 +36,11 @@ inputs:
     description: >-
       How many package versions to keep.
       If unset, defaults to 0 (unlimited).
+  signing-key:
+    description: >-
+      Private gpg key for signing.
+      Please use Secrets!
+    required: true
 runs:
   using: composite
   steps:
@@ -51,3 +56,4 @@ runs:
         COMPONENT: ${{ inputs.component }}
         ARCHITECTURES: ${{ inputs.architectures }}
         LIMIT: ${{ inputs.limit }}
+        SIGNING_KEY: ${{ inputs.signing-key }}

@@ -42,6 +42,10 @@ inputs:
       Private gpg key for signing.
       Please use Secrets!
     required: true
+  import-from-repo-url:
+    description: >-
+      Import existing packages from this repo url.
+      Workaround for immutable GH actions cache.
 outputs:
   repodir:
     description: >-
@@ -60,7 +64,13 @@ runs:
     - name: Install reprepro
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        packages: reprepro ruby-dev binutils
+        packages: apt-mirror apt-transport-https reprepro ruby-dev binutils
+    - name: Import from APT repo
+      id: import-from-apt-repo
+      run: ${{ github.action_path }}/import.sh
+      shell: bash
+      env:
+        IMPORT_FROM_REPO: ${{ inputs.import-from-repo-url }}
     - name: Create APT repo
       id: create-apt-repo
       run: ${{ github.action_path }}/repo.sh

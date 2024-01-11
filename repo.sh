@@ -1,0 +1,135 @@
+#!/bin/bash
+
+set -e
+
+tmpdir="$(mktemp -d)"
+
+repo_name="${REPO_NAME:-${1}}"
+scan_dir="${SCAN_DIR:-${PWD}}"
+keyring_name="${KEYRING_NAME:-${repo_name}-keyring}"
+origin="${ORIGIN:-${repo_name}}"
+suite="${SUITE:-${repo_name}}"
+label="${LABEL:-${repo_name}}"
+codename="${CODENAME:-${repo_name}}"
+component="${COMPONENT:-main}"
+architectures="${ARCHITECTURES:-amd64}"
+limit="${LIMIT:-0}"
+reprepro_basedir="reprepro -b ${tmpdir}/.repo/${repo_name}"
+reprepro="${reprepro_basedir} -C ${component}"
+
+# import keys, create keyring package
+mapfile -t signing_keys < <(printenv | grep -o --color=never "^SIGNING_KEY" | sort)
+
+if ! command -v fpm >/dev/null 2>&1; then
+    apt-get -qq update
+    apt-get -qqy install ruby-dev binutils
+    gem install fpm --no-doc
+fi
+
+keyring_files=""
+fingerprints=()
+
+for signing_key in "${signing_keys[@]}"; do
+    # shellcheck disable=SC2206
+    split=(${signing_key//_/ })
+    id="${split[*]:2}"
+    id="${id// /-}"
+    keyring_version="${signing_key//SIGNING_KEY_/}"
+    gpg --import <<<"${!signing_key}" 2>&1 | tee /tmp/gpg.log
+    fingerprint="$(grep -o "key [0-9A-Z]*:" /tmp/gpg.log | grep -o "[0-9A-Z]*" | tail -n1)"
+    fingerprints+=("${fingerprint}")
+    gpg --export "${fingerprint}" >"${keyring_name}-${id}.gpg"
+    keyring_files+="${keyring_name}-${id}.gpg "
+done
+# shellcheck disable=SC2086
+fpm \
+    --log error \
+    --force \
+    --input-type dir \
+    --output-type deb \
+    --architecture all \
+    --name "${keyring_name}" \
+    --version "${keyring_version//_/-}" \
+    --prefix /etc/apt/trusted.gpg.d \
+    ${keyring_files}
+
+mkdir -p "${tmpdir}/.repo/${repo_name}/conf"
+(
+    echo "Origin: ${origin}"
+    echo "Suite: ${suite}"
+    echo "Label: ${label}"
+    echo "Codename: ${codename}"
+    echo "Components: ${component}"
+    echo "Architectures: ${architectures}"
+    echo "SignWith: ${fingerprints[*]}"
+    echo "Limit: ${limit}"
+    echo ""
+) >>"${tmpdir}/.repo/${repo_name}/conf/distributions"
+
+if ! grep -q "^Components:.*${component}" "${tmpdir}/.repo/${repo_name}/conf/distributions"; then
+    sed -i "s,^Components: \(.*\),Components: \1 ${component}, " "${tmpdir}/.repo/${repo_name}/conf/distributions"
+fi
+
+# export key for curl, configure reprepro (sign w/ multiple keys)
+test -f "${tmpdir}/.repo/gpg.key" || gpg --export --armor "${fingerprints[@]}" >"${tmpdir}/.repo/gpg.key"
+sed -i 's,##SIGNING_KEY_ID##,'"${fingerprints[*]}"',' "${tmpdir}/.repo/${repo_name}/conf/distributions"
+mkdir -p "${scan_dir}/build-${codename}-dummy-dir-for-find-to-succeed"
+
+# add packages
+mapfile -t packages < <(find "${scan_dir}" -type f -name "*.deb")
+
+includedebs=()
+
+for package in "${packages[@]}"; do
+    package_name="$(dpkg -f "${package}" Package)"
+    package_version="$(dpkg -f "${package}" Version)"
+    package_arch="$(dpkg -f "${package}" Architecture)"
+    printf "\e[1;36m[%s %s] Checking for package %s %s (%s) in current repo cache ...\e[0m " "${codename}" "${component}" "${package_name}" "${package_version}" "${package_arch}"
+    case "${package_arch}" in
+    "all")
+        # shellcheck disable=SC2016
+        filter='Package (=='"${package_name}"'), $Version (=='"${package_version}"')'
+        ;;
+    *)
+        # shellcheck disable=SC2016
+        filter='Package (=='"${package_name}"'), $Version (=='"${package_version}"'), $Architecture (=='"${package_arch}"')'
+        ;;
+    esac
+    if [ -d "${tmpdir}/.repo/${repo_name}/db" ]; then
+        if $reprepro listfilter "${codename}" "${filter}" | grep -q '.*'; then
+            printf "\e[0;32mOK\e[0m\n"
+            continue
+        fi
+    fi
+    if grep -q "${package##*/}" <<<"${includedebs[@]}"; then
+        printf "\e[0;32mOK\e[0m\n"
+        continue
+    fi
+    printf "\e\033[0;38;5;166mAdding\e[0m\n"
+    includedebs+=("${package}")
+done
+
+# shellcheck disable=SC2128
+if [ -n "${includedebs}" ]; then
+    $reprepro \
+        -vvv \
+        includedeb \
+        "${codename}" \
+        "${includedebs[@]}"
+fi
+
+if ! $reprepro_basedir -v checkpool fast |& tee /tmp/missing; then
+    printf "\e[0;36mStarting repo cache cleanup ...\e[0m\n"
+    mapfile -t missingfiles < <(grep "Missing file" /tmp/log | grep --color=never -o "/.*\.deb")
+    for missingfile in "${missingfiles[@]}"; do
+        missingfile="${missingfile##*/}"
+        name="$(cut -d'_' -f 1 <<<"${missingfile}")"
+        version="$(cut -d'_' -f 2 <<<"${missingfile}")"
+        echo "cleanup missing file ${missingfile} from repo"
+        $reprepro \
+            -v \
+            remove \
+            "${codename}" \
+            "${name}=${version}"
+    done
+fi

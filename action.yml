@@ -1,4 +1,5 @@
 ---
+# yamllint disable rule:line-length
 name: Create APT repository
 description: Create APT repository using reprepro
 inputs:
@@ -44,7 +45,19 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/repo.sh
+    - name: Setup reprepro debian repository
+      uses: myci-actions/add-deb-repo@11
+      with:
+        repo: deb https://packaging.gitlab.io/reprepro-multiple-versions bookworm main
+        repo-name: reprepro-multiple-versions
+        keys-asc: https://packaging.gitlab.io/reprepro-multiple-versions/gpg.key
+        update: true
+    - name: Install reprepro
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: reprepro
+    - name: Create APT repo
+      run: ${{ github.action_path }}/repo.sh
       shell: bash
       env:
         REPO_NAME: ${{ inputs.repo-name }}

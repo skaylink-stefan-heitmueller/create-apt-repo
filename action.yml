@@ -61,6 +61,12 @@ runs:
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
         packages: reprepro ruby-dev binutils
+    - name: Restore repo cache
+      id: cache-repo-restore
+      uses: actions/cache/restore@v3
+      with:
+        path: .repo
+        key: repo
     - name: Create APT repo
       id: create-apt-repo
       run: ${{ github.action_path }}/repo.sh
@@ -77,3 +83,9 @@ runs:
         ARCHITECTURES: ${{ inputs.architectures }}
         LIMIT: ${{ inputs.limit }}
         SIGNING_KEY: ${{ inputs.signing-key }}
+    - name: Save repo cache
+      id: cache-primes-save
+      uses: actions/cache/save@v3
+      with:
+        path: .repo
+        key: ${{ steps.cache-repo-restore.outputs.cache-primary-key }}

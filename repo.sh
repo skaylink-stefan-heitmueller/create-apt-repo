@@ -2,7 +2,6 @@
 
 set -e
 
-tmpdir="$(mktemp -d)"
 repodir="$(mktemp -d)"
 
 repo_name="${REPO_NAME}"
@@ -15,7 +14,7 @@ codename="${CODENAME:-${repo_name}}"
 component="${COMPONENT:-main}"
 architectures="${ARCHITECTURES:-amd64}"
 limit="${LIMIT:-0}"
-reprepro_basedir="reprepro -b ${tmpdir}/.repo/${repo_name}"
+reprepro_basedir="reprepro -b ${PWD}/.repo/${repo_name}"
 reprepro="${reprepro_basedir} -C ${component}"
 
 sudo gem install fpm --no-doc
@@ -44,7 +43,7 @@ fpm \
     --prefix /etc/apt/trusted.gpg.d \
     ${keyring_files}
 
-mkdir -p "${tmpdir}/.repo/${repo_name}/conf"
+mkdir -p "${PWD}/.repo/${repo_name}/conf"
 (
     echo "Origin: ${origin}"
     echo "Suite: ${suite}"
@@ -55,15 +54,15 @@ mkdir -p "${tmpdir}/.repo/${repo_name}/conf"
     echo "SignWith: ${fingerprints[*]}"
     echo "Limit: ${limit}"
     echo ""
-) >>"${tmpdir}/.repo/${repo_name}/conf/distributions"
+) >>"${PWD}/.repo/${repo_name}/conf/distributions"
 
-if ! grep -q "^Components:.*${component}" "${tmpdir}/.repo/${repo_name}/conf/distributions"; then
-    sed -i "s,^Components: \(.*\),Components: \1 ${component}, " "${tmpdir}/.repo/${repo_name}/conf/distributions"
+if ! grep -q "^Components:.*${component}" "${PWD}/.repo/${repo_name}/conf/distributions"; then
+    sed -i "s,^Components: \(.*\),Components: \1 ${component}, " "${PWD}/.repo/${repo_name}/conf/distributions"
 fi
 
 # export key for curl, configure reprepro (sign w/ multiple keys)
-test -f "${tmpdir}/.repo/gpg.key" || gpg --export --armor "${fingerprints[@]}" >"${tmpdir}/.repo/gpg.key"
-sed -i 's,##SIGNING_KEY_ID##,'"${fingerprints[*]}"',' "${tmpdir}/.repo/${repo_name}/conf/distributions"
+test -f "${PWD}/.repo/gpg.key" || gpg --export --armor "${fingerprints[@]}" >"${PWD}/.repo/gpg.key"
+sed -i 's,##SIGNING_KEY_ID##,'"${fingerprints[*]}"',' "${PWD}/.repo/${repo_name}/conf/distributions"
 mkdir -p "${scan_dir}/build-${codename}-dummy-dir-for-find-to-succeed"
 
 # add packages
@@ -86,7 +85,7 @@ for package in "${packages[@]}"; do
         filter='Package (=='"${package_name}"'), $Version (=='"${package_version}"'), $Architecture (=='"${package_arch}"')'
         ;;
     esac
-    if [ -d "${tmpdir}/.repo/${repo_name}/db" ]; then
+    if [ -d "${PWD}/.repo/${repo_name}/db" ]; then
         if $reprepro listfilter "${codename}" "${filter}" | grep -q '.*'; then
             printf "\e[0;32mOK\e[0m\n"
             continue
@@ -125,7 +124,7 @@ if ! $reprepro_basedir -v checkpool fast |& tee /tmp/missing; then
     done
 fi
 
-cp -rv "${tmpdir}/.repo/${repo_name}"/{dists,pool} "${tmpdir}"/.repo/gpg.key "${repodir}"/
+cp -rv "${PWD}/.repo/${repo_name}"/{dists,pool} "${PWD}"/.repo/gpg.key "${repodir}"/
 
 # See https://github.com/actions/upload-pages-artifact#example-permissions-fix-for-linux
 chmod -c -R +rX "${repodir}"

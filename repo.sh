@@ -125,6 +125,6 @@ if ! $reprepro_basedir -v checkpool fast |& tee /tmp/missing; then
     done
 fi
 
-cp -rv "${tmpdir}/${repo_name}"/{dists,pool} "${tmpdir}"/gpg.key "${repodir}"
+cp -rv "${tmpdir}/.repo/${repo_name}"/{dists,pool} "${tmpdir}"/gpg.key "${repodir}"
 
 echo "repodir=${repodir}" >> "${GITHUB_OUTPUT}"

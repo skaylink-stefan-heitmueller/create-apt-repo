@@ -3,6 +3,7 @@
 set -e
 
 tmpdir="$(mktemp -d)"
+repodir="$(mktemp -d)"
 
 repo_name="${REPO_NAME}"
 scan_dir="${SCAN_DIR:-${PWD}}"
@@ -124,4 +125,6 @@ if ! $reprepro_basedir -v checkpool fast |& tee /tmp/missing; then
     done
 fi
 
-echo "tmpdir=${tmpdir}" >> "${GITHUB_OUTPUT}"
+cp -rv "${tmpdir}/${repo_name}"/{dists,pool} "${tmpdir}"/gpg.key "${repodir}"
+
+echo "repodir=${repodir}" >> "${GITHUB_OUTPUT}"

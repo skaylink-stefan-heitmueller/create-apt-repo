@@ -43,10 +43,10 @@ inputs:
       Please use Secrets!
     required: true
 outputs:
-  tmpdir:
+  repodir:
     description: >-
       Directory which contains the APT repo.
-    value: ${{ steps.create-apt-repo.outputs.tmpdir }}
+    value: ${{ steps.create-apt-repo.outputs.repodir }}
 runs:
   using: composite
   steps:

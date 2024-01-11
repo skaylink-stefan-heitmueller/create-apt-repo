@@ -44,9 +44,10 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: repo.sh ${{ inputs.repo-name }}
+    - run: ${{ github.action_path }}/repo.sh
       shell: bash
       env:
+        REPO_NAME: ${{ inputs.repo-name }}
         SCAN_DIR: ${{ inputs.scan-dir }}
         KEYRING_NAME: ${{ inputs.keyring-name }}
         ORIGIN: ${{ inputs.origin }}

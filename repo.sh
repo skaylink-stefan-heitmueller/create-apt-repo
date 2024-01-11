@@ -4,7 +4,7 @@ set -e
 
 tmpdir="$(mktemp -d)"
 
-repo_name="${REPO_NAME:-${1}}"
+repo_name="${REPO_NAME}"
 scan_dir="${SCAN_DIR:-${PWD}}"
 keyring_name="${KEYRING_NAME:-${repo_name}-keyring}"
 origin="${ORIGIN:-${repo_name}}"

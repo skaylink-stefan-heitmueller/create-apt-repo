@@ -7,6 +7,9 @@ if [[ -z "${IMPORT_FROM_REPO}" ]]; then
     exit 0
 fi
 
-echo "${IMPORT_FROM_REPO}" > /etc/apt/mirror.list
-apt-mirror
-cp -rv /var/spool/apt-mirror/mirror/*/{dists,pool} .
+(
+    echo "set base_path /tmp/apt-mirror"
+    echo "${IMPORT_FROM_REPO}"
+) > /tmp/mirror.list
+apt-mirror /tmp/mirror.list
+cp -rv /tmp/apt-mirror/mirror/*/{dists,pool} .

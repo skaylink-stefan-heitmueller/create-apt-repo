@@ -55,7 +55,7 @@ runs:
     - name: Install reprepro
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        packages: reprepro
+        packages: reprepro ruby-dev binutils
     - name: Create APT repo
       run: ${{ github.action_path }}/repo.sh
       shell: bash

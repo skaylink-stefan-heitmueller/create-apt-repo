@@ -17,11 +17,7 @@ limit="${LIMIT:-0}"
 reprepro_basedir="reprepro -b ${tmpdir}/.repo/${repo_name}"
 reprepro="${reprepro_basedir} -C ${component}"
 
-if ! command -v fpm >/dev/null 2>&1; then
-    apt-get -qq update
-    apt-get -qqy install ruby-dev binutils
-    gem install fpm --no-doc
-fi
+sudo gem install fpm --no-doc
 
 gpg --import <<<"${SIGNING_KEY}" 2>&1 | tee /tmp/gpg.log
 mapfile -t fingerprints < <(grep -o "key [0-9A-Z]*:" /tmp/gpg.log | sort -u | grep -o "[0-9A-Z]*" | tail -n1)

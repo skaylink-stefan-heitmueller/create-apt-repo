@@ -71,10 +71,6 @@ runs:
       shell: bash
       env:
         IMPORT_FROM_REPO: ${{ inputs.import-from-repo-url }}
-    - name: Add SIGNING_KEY mask
-      id: add-signing-key-mask
-      run: echo "::add-mask::${{ inputs.signing-key }}"
-      shell: bash
     - name: Create APT repo
       id: create-apt-repo
       run: ${{ github.action_path }}/repo.sh
